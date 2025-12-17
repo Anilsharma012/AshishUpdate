@@ -1679,7 +1679,6 @@ export default function EnhancedCategoryManagement() {
                                     <Input
                                       placeholder="Mini-category name"
                                       value={mini.name}
-                                      size="sm"
                                       onChange={(e) =>
                                         updateMiniSubcategory(
                                           subIndex,
@@ -1688,7 +1687,7 @@ export default function EnhancedCategoryManagement() {
                                           e.target.value,
                                         )
                                       }
-                                      className="text-sm"
+                                      className="text-sm h-8"
                                     />
                                   </div>
                                   <div>
