@@ -494,11 +494,17 @@ export default function EnhancedCategoryManagement() {
                   res?.data?.error || "Failed to create mini-subcategory",
                 );
               }
+              // Capture returned ID so future updates/deletes can reference it
+              const miniId = res.data?.data?._id;
+              if (miniId) {
+                mini.id = miniId;
+              }
             } catch (e: any) {
               const errorMsg =
                 e?.message || "Failed to create mini-subcategory";
               console.error("Failed to create mini-subcategory", mini, e);
               setError(errorMsg);
+              continue; // Skip this mini but continue with others
             }
           }
         } catch (e) {
