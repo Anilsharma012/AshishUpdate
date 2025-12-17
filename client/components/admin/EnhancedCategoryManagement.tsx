@@ -302,14 +302,30 @@ export default function EnhancedCategoryManagement() {
 
   const addMiniSubcategory = (subcategoryIndex: number) => {
     setNewCategory((prev) => {
-      const updated = [...prev.subcategories];
-      const subcat = { ...updated[subcategoryIndex] };
-      subcat.miniSubcategories = [
-        ...(subcat.miniSubcategories || []),
-        { name: "", slug: "", description: "", active: true },
-      ];
-      updated[subcategoryIndex] = subcat;
-      return { ...prev, subcategories: updated };
+      const updatedSubcategories = [...prev.subcategories];
+      const subcategory = updatedSubcategories[subcategoryIndex];
+
+      if (!subcategory) {
+        console.warn(`Subcategory at index ${subcategoryIndex} not found`);
+        return prev;
+      }
+
+      const newMiniSubcategory: EditableMiniSubcategory = {
+        name: "",
+        slug: "",
+        description: "",
+        active: true,
+      };
+
+      updatedSubcategories[subcategoryIndex] = {
+        ...subcategory,
+        miniSubcategories: [
+          ...(subcategory.miniSubcategories || []),
+          newMiniSubcategory,
+        ],
+      };
+
+      return { ...prev, subcategories: updatedSubcategories };
     });
   };
 
