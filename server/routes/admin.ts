@@ -656,7 +656,7 @@ export const getAdminCategories: RequestHandler = async (req, res) => {
           subcategoriesWithCounts = await Promise.all(
             subcategoriesWithCounts.map(async (sub: any) => {
               const miniSubcategories = await db
-                .collection("miniSubcategories")
+                .collection("mini_subcategories")
                 .find({ subcategoryId: sub._id?.toString() })
                 .sort({ sortOrder: 1 })
                 .toArray();
