@@ -816,13 +816,16 @@ export default function EnhancedCategoryManagement() {
   };
 
   const addSubcategory = () => {
-    setNewCategory((prev) => ({
-      ...prev,
-      subcategories: [
+    setNewCategory((prev) => {
+      const newSubcategories = [
         ...prev.subcategories,
         { name: "", slug: "", description: "", miniSubcategories: [] },
-      ],
-    }));
+      ];
+      // Auto-expand newly added subcategory so mini-categories section is visible
+      const newId = `sub-${newSubcategories.length - 1}`;
+      setExpandedSubcategories((prev) => new Set([...prev, newId]));
+      return { ...prev, subcategories: newSubcategories };
+    });
   };
 
   const updateSubcategory = (
