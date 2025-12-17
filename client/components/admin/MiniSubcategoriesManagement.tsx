@@ -128,10 +128,13 @@ export default function MiniSubcategoriesManagement() {
   };
 
   const handleCreate = async () => {
-    if (!token || !formData.name || !formData.slug || !selectedSubcategory) {
-      setError("Please fill in all required fields");
+    if (!token || !formData.name || !selectedSubcategory) {
+      setError("Please fill in all required fields: name and subcategory");
       return;
     }
+
+    // Auto-generate slug if not provided
+    const slug = formData.slug || generateSlug(formData.name);
 
     try {
       const response = await fetch("/api/admin/mini-subcategories", {
