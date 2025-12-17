@@ -162,7 +162,11 @@ function App() {
                       element={<CategoryProperties />}
                     />
                     <Route
-                      path="/categories/:category/:subcategory/:propertyType"
+                      path="/categories/:category/:subcategory/:miniSubcategory"
+                      element={<CategoryProperties />}
+                    />
+                    <Route
+                      path="/categories/:category/:subcategory/:miniSubcategory/:propertyType"
                       element={<CategoryProperties />}
                     />
                     <Route path="/properties" element={<Properties />} />
