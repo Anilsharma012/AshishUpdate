@@ -636,8 +636,10 @@ export default function EnhancedCategoryManagement() {
                 res?.data?.error || "Failed to update mini-subcategory",
               );
             }
-          } catch (e) {
+          } catch (e: any) {
+            const errorMsg = e?.message || "Failed to update mini-subcategory";
             console.error("Update mini-subcategory failed:", mini, e);
+            setError(errorMsg);
           }
         } else if (mini.name && mini.slug) {
           // Only create if mini has name and slug (prevents creating empty entries)
@@ -660,8 +662,10 @@ export default function EnhancedCategoryManagement() {
                 res?.data?.error || "Failed to create mini-subcategory",
               );
             }
-          } catch (e) {
+          } catch (e: any) {
+            const errorMsg = e?.message || "Failed to create mini-subcategory";
             console.error("Create mini-subcategory failed:", mini, e);
+            setError(errorMsg);
           }
         }
       }
