@@ -474,10 +474,13 @@ export default function EnhancedCategoryManagement() {
                 token,
               );
               if (!res?.data?.success) {
-                throw new Error(res?.data?.error || "Failed to create mini-subcategory");
+                throw new Error(
+                  res?.data?.error || "Failed to create mini-subcategory",
+                );
               }
             } catch (e: any) {
-              const errorMsg = e?.message || "Failed to create mini-subcategory";
+              const errorMsg =
+                e?.message || "Failed to create mini-subcategory";
               console.error("Failed to create mini-subcategory", mini, e);
               setError(errorMsg);
             }

@@ -258,11 +258,9 @@ export const getAdminNotificationCounts: RequestHandler = async (req, res) => {
   try {
     const db = getDatabase();
 
-    const pendingCount = await db
-      .collection("properties")
-      .countDocuments({
-        approvalStatus: { $in: ["pending", "pending_approval"] },
-      });
+    const pendingCount = await db.collection("properties").countDocuments({
+      approvalStatus: { $in: ["pending", "pending_approval"] },
+    });
 
     // Approximate resubmitted: pending properties that have been updated after creation
     const resubmittedCount = await db.collection("properties").countDocuments({
@@ -303,12 +301,10 @@ export const getAdminNotificationCounts: RequestHandler = async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error("Error fetching admin notification counts:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: "Failed to fetch admin notification counts",
-      });
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch admin notification counts",
+    });
   }
 };
 
@@ -655,7 +651,8 @@ export const getAdminCategories: RequestHandler = async (req, res) => {
         if (withSub) {
           subcategoriesWithCounts = await Promise.all(
             subcategoriesWithCounts.map(async (sub: any) => {
-              const subId = sub._id instanceof ObjectId ? sub._id.toString() : sub._id;
+              const subId =
+                sub._id instanceof ObjectId ? sub._id.toString() : sub._id;
               const miniSubcategories = await db
                 .collection("mini_subcategories")
                 .find({ subcategoryId: subId })
