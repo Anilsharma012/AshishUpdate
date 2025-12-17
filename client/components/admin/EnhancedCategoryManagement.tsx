@@ -151,6 +151,7 @@ export default function EnhancedCategoryManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [uploading, setUploading] = useState(false);
+  // Expand all subcategories by default to show mini-categories
   const [expandedSubcategories, setExpandedSubcategories] = useState<Set<string>>(new Set());
   const [editingMiniSubcategoryIndex, setEditingMiniSubcategoryIndex] = useState<number | null>(null);
 
