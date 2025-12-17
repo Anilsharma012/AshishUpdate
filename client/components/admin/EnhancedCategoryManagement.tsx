@@ -15,6 +15,8 @@ import {
   Power,
   Image,
   Grid,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -44,6 +46,16 @@ import { api } from "@/lib/api";
 /* Types                                                               */
 /* ------------------------------------------------------------------ */
 
+interface MiniSubcategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  active?: boolean;
+  count: number;
+}
+
 interface Subcategory {
   id: string;
   name: string;
@@ -51,6 +63,7 @@ interface Subcategory {
   description?: string;
   image?: string;
   count: number;
+  miniSubcategories?: MiniSubcategory[];
 }
 
 interface Category {
@@ -65,12 +78,22 @@ interface Category {
   count: number;
 }
 
+type EditableMiniSubcategory = {
+  id?: string;
+  name: string;
+  slug: string;
+  description?: string;
+  imageFile?: File;
+  active?: boolean;
+};
+
 type EditableSubcategory = {
   id?: string;
   name: string;
   slug: string;
   description?: string;
   imageFile?: File;
+  miniSubcategories?: EditableMiniSubcategory[];
 };
 
 type NewCategoryState = {
@@ -96,7 +119,7 @@ const fromApi = (raw: any): Category => ({
   slug: raw?.slug ?? "",
   icon: raw?.iconUrl ?? raw?.icon ?? "",
   description: raw?.description ?? "",
-  subcategories: [], // will be filled in fetchCategories
+  subcategories: [],
   order: raw?.sortOrder ?? raw?.order ?? 0,
   active: raw?.isActive ?? raw?.active ?? true,
   count: raw?.count ?? 0,
@@ -128,6 +151,8 @@ export default function EnhancedCategoryManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [expandedSubcategories, setExpandedSubcategories] = useState<Set<string>>(new Set());
+  const [editingMiniSubcategoryIndex, setEditingMiniSubcategoryIndex] = useState<number | null>(null);
 
   const [newCategory, setNewCategory] = useState<NewCategoryState>({
     name: "",
@@ -153,7 +178,6 @@ export default function EnhancedCategoryManagement() {
       window.removeEventListener("categories:updated", onUpdate);
       window.removeEventListener("subcategories:updated", onUpdate);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   /* ---------------------------------------------------------------- */
@@ -187,6 +211,17 @@ export default function EnhancedCategoryManagement() {
                 description: sub.description || "",
                 image: sub.iconUrl || sub.icon || "",
                 count: sub.count || 0,
+                miniSubcategories: Array.isArray(sub.miniSubcategories)
+                  ? sub.miniSubcategories.map((mini: any): MiniSubcategory => ({
+                      id: mini._id?.toString?.() || mini.id || Math.random().toString(36).substr(2, 9),
+                      name: mini.name || "",
+                      slug: mini.slug || "",
+                      description: mini.description || "",
+                      icon: mini.iconUrl || mini.icon || "",
+                      active: mini.isActive ?? mini.active ?? true,
+                      count: mini.count || 0,
+                    }))
+                  : [],
               }))
             : [];
 
@@ -209,7 +244,6 @@ export default function EnhancedCategoryManagement() {
   /* Uploads                                                          */
   /* ---------------------------------------------------------------- */
 
-  // Category icon upload
   const uploadIcon = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append("icon", file);
@@ -228,7 +262,6 @@ export default function EnhancedCategoryManagement() {
     return response.data?.data?.iconUrl || response.data?.iconUrl || "";
   };
 
-  // Subcategory icon upload (can point to same upload endpoint or a dedicated one)
   const uploadSubIcon = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append("icon", file);
@@ -248,6 +281,85 @@ export default function EnhancedCategoryManagement() {
   };
 
   /* ---------------------------------------------------------------- */
+  /* MINI-SUBCATEGORY MANAGEMENT (NEW)                               */
+  /* ---------------------------------------------------------------- */
+
+  const addMiniSubcategory = (subcategoryIndex: number) => {
+    setNewCategory((prev) => {
+      const updated = [...prev.subcategories];
+      const subcat = { ...updated[subcategoryIndex] };
+      subcat.miniSubcategories = [
+        ...(subcat.miniSubcategories || []),
+        { name: "", slug: "", description: "", active: true },
+      ];
+      updated[subcategoryIndex] = subcat;
+      return { ...prev, subcategories: updated };
+    });
+  };
+
+  const updateMiniSubcategory = (
+    subcategoryIndex: number,
+    miniIndex: number,
+    field: keyof EditableMiniSubcategory,
+    value: string | File | boolean
+  ) => {
+    setNewCategory((prev) => {
+      const updated = [...prev.subcategories];
+      const subcat = { ...updated[subcategoryIndex] };
+      const minis = [...(subcat.miniSubcategories || [])];
+      const target = { ...minis[miniIndex] };
+
+      if (field === "imageFile") {
+        target.imageFile = value as File;
+      } else if (field === "active") {
+        target.active = value as boolean;
+      } else {
+        (target as any)[field] = value;
+        if (field === "name") {
+          target.slug = generateSlug(value as string);
+        }
+      }
+
+      minis[miniIndex] = target;
+      subcat.miniSubcategories = minis;
+      updated[subcategoryIndex] = subcat;
+      return { ...prev, subcategories: updated };
+    });
+  };
+
+  const removeMiniSubcategory = async (subcategoryIndex: number, miniIndex: number) => {
+    const sub = newCategory.subcategories[subcategoryIndex];
+    const mini = sub.miniSubcategories?.[miniIndex];
+
+    if (editingCategory && mini?.id && token) {
+      try {
+        const res = await api.delete(
+          `admin/mini-subcategories/${mini.id}`,
+          token
+        );
+        if (!res?.data?.success) {
+          throw new Error(res?.data?.error || "Failed to delete mini-subcategory");
+        }
+        window.dispatchEvent(new Event("subcategories:updated"));
+      } catch (error: any) {
+        console.error("Error deleting mini-subcategory:", error?.message || error);
+        setError(error?.message || "Failed to delete mini-subcategory");
+        return;
+      }
+    }
+
+    setNewCategory((prev) => {
+      const updated = [...prev.subcategories];
+      const subcat = { ...updated[subcategoryIndex] };
+      subcat.miniSubcategories = (subcat.miniSubcategories || []).filter(
+        (_, i) => i !== miniIndex
+      );
+      updated[subcategoryIndex] = subcat;
+      return { ...prev, subcategories: updated };
+    });
+  };
+
+  /* ---------------------------------------------------------------- */
   /* CREATE                                                           */
   /* ---------------------------------------------------------------- */
 
@@ -258,12 +370,10 @@ export default function EnhancedCategoryManagement() {
       setUploading(true);
       let iconUrl = newCategory.icon;
 
-      // Upload icon if file is selected
       if (newCategory.iconFile) {
         iconUrl = await uploadIcon(newCategory.iconFile);
       }
 
-      // Prepare payload for backend
       const categoryPayload = toApi({
         name: newCategory.name,
         slug: newCategory.slug,
@@ -286,14 +396,13 @@ export default function EnhancedCategoryManagement() {
       };
       const categoryId = createdCategory._id;
 
-      // Create subcategories with their own icons (if provided)
       for (let i = 0; i < newCategory.subcategories.length; i++) {
         const sub = newCategory.subcategories[i];
         try {
           let subIconUrl = "";
           if (sub.imageFile) subIconUrl = await uploadSubIcon(sub.imageFile);
 
-          await api.post(
+          const subRes = await api.post(
             "admin/subcategories",
             {
               categoryId,
@@ -306,6 +415,37 @@ export default function EnhancedCategoryManagement() {
             },
             token
           );
+
+          if (!subRes?.data?.success) {
+            console.warn("Failed to create subcategory", sub);
+            continue;
+          }
+
+          const subcategoryId = subRes.data.data?._id || subRes.data.data?.subcategoryId;
+
+          for (let j = 0; j < (sub.miniSubcategories?.length ?? 0); j++) {
+            const mini = sub.miniSubcategories![j];
+            try {
+              let miniIconUrl = "";
+              if (mini.imageFile) miniIconUrl = await uploadSubIcon(mini.imageFile);
+
+              await api.post(
+                "admin/mini-subcategories",
+                {
+                  subcategoryId,
+                  name: mini.name,
+                  slug: mini.slug,
+                  description: mini.description,
+                  iconUrl: miniIconUrl || "/placeholder.svg",
+                  sortOrder: j + 1,
+                  isActive: mini.active ?? true,
+                },
+                token
+              );
+            } catch (e) {
+              console.warn("Failed to create mini-subcategory", mini, e);
+            }
+          }
         } catch (e) {
           console.warn("Failed to create subcategory", sub, e);
         }
@@ -343,18 +483,16 @@ export default function EnhancedCategoryManagement() {
   };
 
   /* ---------------------------------------------------------------- */
-  /* EDIT FLOW: Sync Subcategories (create/update/delete)             */
+  /* EDIT FLOW: Sync Subcategories + Mini-Subcategories               */
   /* ---------------------------------------------------------------- */
 
   const syncSubcategoriesForEdit = async (categoryId: string) => {
     if (!editingCategory) return;
 
-    // Existing subs from DB (before edit)
     const existingById = new Map(
       (editingCategory.subcategories || []).map((s) => [s.id, s])
     );
 
-    // 1) Create/Update
     for (let i = 0; i < newCategory.subcategories.length; i++) {
       const sub = newCategory.subcategories[i];
       const sortOrder = i + 1;
@@ -368,8 +506,9 @@ export default function EnhancedCategoryManagement() {
         }
       }
 
+      let subcategoryId: string;
+
       if (sub.id && existingById.has(sub.id)) {
-        // UPDATE
         const payload: any = {
           name: sub.name,
           slug: sub.slug,
@@ -384,11 +523,12 @@ export default function EnhancedCategoryManagement() {
           if (!res?.data?.success) {
             throw new Error(res?.data?.error || "Failed to update subcategory");
           }
+          subcategoryId = sub.id;
         } catch (e) {
           console.error("Update subcategory failed:", sub, e);
+          continue;
         }
       } else {
-        // CREATE
         try {
           const res = await api.post(
             "admin/subcategories",
@@ -406,14 +546,96 @@ export default function EnhancedCategoryManagement() {
           if (!res?.data?.success) {
             throw new Error(res?.data?.error || "Failed to create subcategory");
           }
+          subcategoryId = res.data.data?._id || res.data.data?.subcategoryId;
         } catch (e) {
           console.error("Create subcategory failed:", sub, e);
+          continue;
+        }
+      }
+
+      const existingMiniById = new Map(
+        (sub.miniSubcategories || []).map((m) => [m.id, m])
+      );
+
+      for (let j = 0; j < (sub.miniSubcategories?.length ?? 0); j++) {
+        const mini = sub.miniSubcategories![j];
+        const miniSortOrder = j + 1;
+
+        let miniIconUrl: string | undefined = undefined;
+        if (mini.imageFile) {
+          try {
+            miniIconUrl = await uploadSubIcon(mini.imageFile);
+          } catch (err) {
+            console.warn("Mini icon upload failed:", err);
+          }
+        }
+
+        if (mini.id && existingMiniById.has(mini.id)) {
+          const payload: any = {
+            name: mini.name,
+            slug: mini.slug,
+            description: mini.description,
+            sortOrder: miniSortOrder,
+            isActive: mini.active ?? true,
+          };
+          if (miniIconUrl) payload.iconUrl = miniIconUrl;
+
+          try {
+            const res = await api.put(
+              `admin/mini-subcategories/${mini.id}`,
+              payload,
+              token
+            );
+            if (!res?.data?.success) {
+              throw new Error(res?.data?.error || "Failed to update mini-subcategory");
+            }
+          } catch (e) {
+            console.error("Update mini-subcategory failed:", mini, e);
+          }
+        } else {
+          try {
+            const res = await api.post(
+              "admin/mini-subcategories",
+              {
+                subcategoryId,
+                name: mini.name,
+                slug: mini.slug,
+                description: mini.description,
+                iconUrl: miniIconUrl || "/placeholder.svg",
+                sortOrder: miniSortOrder,
+                isActive: mini.active ?? true,
+              },
+              token
+            );
+            if (!res?.data?.success) {
+              throw new Error(res?.data?.error || "Failed to create mini-subcategory");
+            }
+          } catch (e) {
+            console.error("Create mini-subcategory failed:", mini, e);
+          }
+        }
+      }
+
+      const incomingMiniIds = new Set(
+        (sub.miniSubcategories || []).filter((m) => !!m.id).map((m) => m.id!)
+      );
+      for (const [id] of existingMiniById) {
+        if (!incomingMiniIds.has(id)) {
+          try {
+            const res = await api.delete(`admin/mini-subcategories/${id}`, token);
+            if (!res?.data?.success) {
+              throw new Error(res?.data?.error || "Failed to delete mini-subcategory");
+            }
+          } catch (e) {
+            console.error("Delete mini-subcategory failed:", id, e);
+          }
         }
       }
     }
 
-    // 2) Delete subs that were removed in UI
-    const incomingIds = new Set(newCategory.subcategories.filter(s => !!s.id).map(s => s.id!));
+    const incomingIds = new Set(
+      newCategory.subcategories.filter((s) => !!s.id).map((s) => s.id!)
+    );
     for (const [id] of existingById) {
       if (!incomingIds.has(id)) {
         try {
@@ -433,7 +655,6 @@ export default function EnhancedCategoryManagement() {
   /* ---------------------------------------------------------------- */
 
   const handleSubmit = async () => {
-    // EDIT
     if (editingCategory) {
       try {
         setUploading(true);
@@ -452,7 +673,6 @@ export default function EnhancedCategoryManagement() {
           active: newCategory.active ?? true,
         });
 
-        // 🔴 Sync subcategories (create/update/delete)
         await syncSubcategoriesForEdit(editingCategory._id);
 
         window.dispatchEvent(new Event("categories:updated"));
@@ -467,7 +687,6 @@ export default function EnhancedCategoryManagement() {
       return;
     }
 
-    // CREATE
     await createCategory();
   };
 
@@ -585,6 +804,8 @@ export default function EnhancedCategoryManagement() {
       active: true,
     });
     setEditingCategory(null);
+    setEditingMiniSubcategoryIndex(null);
+    setExpandedSubcategories(new Set());
   };
 
   const addSubcategory = () => {
@@ -592,7 +813,7 @@ export default function EnhancedCategoryManagement() {
       ...prev,
       subcategories: [
         ...prev.subcategories,
-        { name: "", slug: "", description: "" },
+        { name: "", slug: "", description: "", miniSubcategories: [] },
       ],
     }));
   };
@@ -623,7 +844,6 @@ export default function EnhancedCategoryManagement() {
   const removeSubcategory = async (index: number) => {
     const sub = newCategory.subcategories[index];
 
-    // If editing existing category and this sub has an id -> delete from backend too
     if (editingCategory && sub?.id && token) {
       try {
         const res = await api.delete(`admin/subcategories/${sub.id}`, token);
@@ -634,7 +854,7 @@ export default function EnhancedCategoryManagement() {
       } catch (error: any) {
         console.error("Error deleting subcategory:", error?.message || error);
         setError(error?.message || "Failed to delete subcategory");
-        return; // don’t remove from state if backend failed
+        return;
       }
     }
 
@@ -658,18 +878,26 @@ export default function EnhancedCategoryManagement() {
     return matchesSearch && matchesFilter;
   });
 
+  const toggleSubcategoryExpanded = (subcategoryId: string) => {
+    const newSet = new Set(expandedSubcategories);
+    if (newSet.has(subcategoryId)) {
+      newSet.delete(subcategoryId);
+    } else {
+      newSet.add(subcategoryId);
+    }
+    setExpandedSubcategories(newSet);
+  };
+
   /* ---------------------------------------------------------------- */
   /* Render                                                            */
   /* ---------------------------------------------------------------- */
 
   if (loading) {
     return (
-      
       <div className="text-center py-8">
         <div className="animate-spin w-8 h-8 border-2 border-[#C70000] border-t-transparent rounded-full mx-auto mb-4"></div>
         <p className="text-gray-600">Loading categories...</p>
       </div>
-      
     );
   }
 
@@ -692,15 +920,13 @@ export default function EnhancedCategoryManagement() {
         </div>
       )}
 
-      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-2xl font-bold text-gray-900">
             Enhanced Category Management
           </h3>
           <p className="text-gray-600">
-            Complete control over categories, subcategories, icons, and display
-            order
+            Complete control over categories, subcategories, mini-categories, icons, and display order
           </p>
         </div>
         <Button
@@ -716,7 +942,6 @@ export default function EnhancedCategoryManagement() {
         </Button>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -762,23 +987,29 @@ export default function EnhancedCategoryManagement() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Subcategories</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Subcategories + Mini
+            </CardTitle>
             <Layers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {categories.reduce(
-                (sum, cat) =>
-                  sum + (cat.subcategories ? cat.subcategories.length : 0),
-                0
-              )}
+              {categories.reduce((sum, cat) => {
+                const subCount = cat.subcategories ? cat.subcategories.length : 0;
+                const miniCount = cat.subcategories?.reduce(
+                  (m, s) => m + ((s.miniSubcategories?.length || 0)),
+                  0
+                ) || 0;
+                return sum + subCount + miniCount;
+              }, 0)}
             </div>
-            <p className="text-xs text-muted-foreground">Total subcategories</p>
+            <p className="text-xs text-muted-foreground">
+              All sub & mini levels
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search and Filters */}
       <div className="flex space-x-4">
         <Input
           placeholder="Search categories..."
@@ -805,7 +1036,6 @@ export default function EnhancedCategoryManagement() {
         </Button>
       </div>
 
-      {/* Categories Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -813,7 +1043,7 @@ export default function EnhancedCategoryManagement() {
               <TableRow>
                 <TableHead>Category</TableHead>
                 <TableHead>Icon</TableHead>
-                <TableHead>Subcategories</TableHead>
+                <TableHead>Subcategories & Mini</TableHead>
                 <TableHead>Properties</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Order</TableHead>
@@ -854,10 +1084,9 @@ export default function EnhancedCategoryManagement() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <button
-                        className="text-[#C70000] underline text-sm hover:font-semibold"
-                        aria-label={`Manage subcategories for ${category.name}`}
+                        className="text-[#C70000] underline text-sm hover:font-semibold block"
                         onClick={() => {
                           setEditingCategory(category);
                           setNewCategory({
@@ -872,6 +1101,15 @@ export default function EnhancedCategoryManagement() {
                                 name: s.name,
                                 slug: s.slug || "",
                                 description: s.description || "",
+                                miniSubcategories: (s.miniSubcategories || []).map(
+                                  (m) => ({
+                                    id: m.id,
+                                    name: m.name,
+                                    slug: m.slug,
+                                    description: m.description,
+                                    active: m.active ?? true,
+                                  })
+                                ),
                               })
                             ),
                             order: category.order ?? 999,
@@ -880,25 +1118,42 @@ export default function EnhancedCategoryManagement() {
                           setIsCreateDialogOpen(true);
                         }}
                       >
-                        Manage Subcategories (
-                        {(category.subcategories || []).length})
+                        Manage All ({(category.subcategories || []).length})
                       </button>
-                      <div className="pt-1">
-                        {(category.subcategories || [])
-                          .slice(0, 3)
-                          .map((sub, subIndex) => (
-                            <Badge
-                              key={subIndex}
-                              variant="outline"
-                              className="mr-1 mb-1"
-                            >
-                              {sub.name} ({sub.count})
-                            </Badge>
-                          ))}
-                        {(category.subcategories || []).length > 3 && (
-                          <Badge variant="outline">
-                            +{(category.subcategories || []).length - 3} more
-                          </Badge>
+
+                      <div className="pt-1 space-y-1">
+                        {(category.subcategories || []).slice(0, 2).map((sub) => (
+                          <div
+                            key={sub.id}
+                            className="bg-gray-50 rounded p-2 text-xs border-l-2 border-[#C70000]"
+                          >
+                            <div className="font-semibold text-gray-700">
+                              {sub.name}
+                            </div>
+                            {sub.miniSubcategories && sub.miniSubcategories.length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {sub.miniSubcategories.slice(0, 3).map((mini) => (
+                                  <Badge
+                                    key={mini.id}
+                                    variant="outline"
+                                    className="text-xs"
+                                  >
+                                    {mini.name}
+                                  </Badge>
+                                ))}
+                                {sub.miniSubcategories.length > 3 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{sub.miniSubcategories.length - 3}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {(category.subcategories || []).length > 2 && (
+                          <div className="text-xs text-gray-500 italic">
+                            +{(category.subcategories || []).length - 2} more subcategories
+                          </div>
                         )}
                       </div>
                     </div>
@@ -992,6 +1247,15 @@ export default function EnhancedCategoryManagement() {
                                 name: s.name,
                                 slug: s.slug || "",
                                 description: s.description || "",
+                                miniSubcategories: (s.miniSubcategories || []).map(
+                                  (m) => ({
+                                    id: m.id,
+                                    name: m.name,
+                                    slug: m.slug,
+                                    description: m.description,
+                                    active: m.active ?? true,
+                                  })
+                                ),
                               })
                             ),
                             order: category.order ?? 999,
@@ -1029,7 +1293,6 @@ export default function EnhancedCategoryManagement() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
       <Dialog
         open={isCreateDialogOpen}
         onOpenChange={(open) => {
@@ -1037,7 +1300,7 @@ export default function EnhancedCategoryManagement() {
           if (!open) resetForm();
         }}
       >
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingCategory ? "Edit Category" : "Create New Category"}
@@ -1170,12 +1433,9 @@ export default function EnhancedCategoryManagement() {
               </div>
             </div>
 
-            {/* Subcategories Section */}
-            <div>
+            <div className="border-t pt-6">
               <div className="flex justify-between items-center mb-4">
-                <label className="block text-sm font-medium">
-                  Subcategories
-                </label>
+                <h4 className="font-semibold text-gray-900">Subcategories</h4>
                 <Button
                   type="button"
                   variant="outline"
@@ -1188,21 +1448,45 @@ export default function EnhancedCategoryManagement() {
               </div>
 
               <div className="space-y-4">
-                {newCategory.subcategories.map((sub, index) => (
+                {newCategory.subcategories.map((sub, subIndex) => (
                   <div
-                    key={index}
-                    className="border border-gray-200 rounded-lg p-4"
+                    key={subIndex}
+                    className="border border-gray-300 rounded-lg p-4 bg-gradient-to-br from-gray-50 to-white"
                   >
-                    <div className="grid grid-cols-2 gap-4 mb-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleSubcategoryExpanded(sub.id || `sub-${subIndex}`)}
+                        className="flex items-center gap-2 hover:text-[#C70000] transition"
+                      >
+                        {expandedSubcategories.has(sub.id || `sub-${subIndex}`) ? (
+                          <ChevronDown className="h-5 w-5" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5" />
+                        )}
+                        <span className="font-semibold text-gray-900">{sub.name || "New Subcategory"}</span>
+                      </button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeSubcategory(subIndex)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 mb-3">
                       <div>
                         <label className="block text-xs font-medium mb-1">
-                          Subcategory Name
+                          Name
                         </label>
                         <Input
                           placeholder="Subcategory name"
                           value={sub.name}
                           onChange={(e) =>
-                            updateSubcategory(index, "name", e.target.value)
+                            updateSubcategory(subIndex, "name", e.target.value)
                           }
                         />
                       </div>
@@ -1214,7 +1498,7 @@ export default function EnhancedCategoryManagement() {
                           placeholder="subcategory-slug"
                           value={sub.slug}
                           onChange={(e) =>
-                            updateSubcategory(index, "slug", e.target.value)
+                            updateSubcategory(subIndex, "slug", e.target.value)
                           }
                         />
                       </div>
@@ -1228,42 +1512,184 @@ export default function EnhancedCategoryManagement() {
                         placeholder="Subcategory description..."
                         value={sub.description}
                         onChange={(e) =>
-                          updateSubcategory(index, "description", e.target.value)
+                          updateSubcategory(subIndex, "description", e.target.value)
                         }
                         rows={2}
                       />
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="block text-xs font-medium mb-1">
-                          Image
-                        </label>
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              updateSubcategory(index, "imageFile", file);
-                            }
-                          }}
-                          className="w-48"
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeSubcategory(index)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Remove
-                      </Button>
+                    <div className="mb-4">
+                      <label className="block text-xs font-medium mb-1">
+                        Image
+                      </label>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            updateSubcategory(subIndex, "imageFile", file);
+                          }
+                        }}
+                      />
                     </div>
+
+                    {expandedSubcategories.has(sub.id || `sub-${subIndex}`) && (
+                      <div className="border-t pt-4 bg-white rounded-b-lg">
+                        <div className="flex justify-between items-center mb-3">
+                          <h5 className="font-semibold text-gray-800 text-sm">
+                            Mini-Categories
+                          </h5>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addMiniSubcategory(subIndex)}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add Mini
+                          </Button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {(sub.miniSubcategories || []).map((mini, miniIndex) => (
+                            <div
+                              key={miniIndex}
+                              className="border border-gray-200 rounded p-3 bg-gray-50"
+                            >
+                              <div className="grid grid-cols-2 gap-2 mb-2">
+                                <div>
+                                  <label className="block text-xs font-medium mb-1">
+                                    Name
+                                  </label>
+                                  <Input
+                                    placeholder="Mini-category name"
+                                    value={mini.name}
+                                    size="sm"
+                                    onChange={(e) =>
+                                      updateMiniSubcategory(
+                                        subIndex,
+                                        miniIndex,
+                                        "name",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium mb-1">
+                                    Slug
+                                  </label>
+                                  <Input
+                                    placeholder="mini-slug"
+                                    value={mini.slug}
+                                    size="sm"
+                                    onChange={(e) =>
+                                      updateMiniSubcategory(
+                                        subIndex,
+                                        miniIndex,
+                                        "slug",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="text-sm"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="mb-2">
+                                <label className="block text-xs font-medium mb-1">
+                                  Description
+                                </label>
+                                <Textarea
+                                  placeholder="Mini-category description..."
+                                  value={mini.description}
+                                  onChange={(e) =>
+                                    updateMiniSubcategory(
+                                      subIndex,
+                                      miniIndex,
+                                      "description",
+                                      e.target.value
+                                    )
+                                  }
+                                  rows={1}
+                                  className="text-sm"
+                                />
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <label className="block text-xs font-medium mb-1">
+                                    Image
+                                  </label>
+                                  <Input
+                                    type="file"
+                                    accept="image/*"
+                                    size="sm"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        updateMiniSubcategory(
+                                          subIndex,
+                                          miniIndex,
+                                          "imageFile",
+                                          file
+                                        );
+                                      }
+                                    }}
+                                    className="text-sm"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2 ml-2">
+                                  <div className="flex items-center space-x-1">
+                                    <Switch
+                                      checked={mini.active ?? true}
+                                      onCheckedChange={(checked) =>
+                                        updateMiniSubcategory(
+                                          subIndex,
+                                          miniIndex,
+                                          "active",
+                                          checked
+                                        )
+                                      }
+                                    />
+                                    <span className="text-xs font-medium">
+                                      {mini.active ?? true ? "Active" : "Inactive"}
+                                    </span>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      removeMiniSubcategory(subIndex, miniIndex)
+                                    }
+                                    className="text-red-600 h-8 w-8 p-0"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          {(!sub.miniSubcategories || sub.miniSubcategories.length === 0) && (
+                            <div className="text-center text-gray-500 text-sm py-2">
+                              No mini-categories yet. Click "Add Mini" to create one.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
+
+                {newCategory.subcategories.length === 0 && (
+                  <div className="text-center text-gray-500 py-4 border border-dashed border-gray-300 rounded-lg">
+                    No subcategories yet. Click "Add Subcategory" to create one.
+                  </div>
+                )}
               </div>
             </div>
 
