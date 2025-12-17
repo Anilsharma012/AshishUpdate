@@ -302,14 +302,30 @@ export default function EnhancedCategoryManagement() {
 
   const addMiniSubcategory = (subcategoryIndex: number) => {
     setNewCategory((prev) => {
-      const updated = [...prev.subcategories];
-      const subcat = { ...updated[subcategoryIndex] };
-      subcat.miniSubcategories = [
-        ...(subcat.miniSubcategories || []),
-        { name: "", slug: "", description: "", active: true },
-      ];
-      updated[subcategoryIndex] = subcat;
-      return { ...prev, subcategories: updated };
+      const updatedSubcategories = [...prev.subcategories];
+      const subcategory = updatedSubcategories[subcategoryIndex];
+
+      if (!subcategory) {
+        console.warn(`Subcategory at index ${subcategoryIndex} not found`);
+        return prev;
+      }
+
+      const newMiniSubcategory: EditableMiniSubcategory = {
+        name: "",
+        slug: "",
+        description: "",
+        active: true,
+      };
+
+      updatedSubcategories[subcategoryIndex] = {
+        ...subcategory,
+        miniSubcategories: [
+          ...(subcategory.miniSubcategories || []),
+          newMiniSubcategory,
+        ],
+      };
+
+      return { ...prev, subcategories: updatedSubcategories };
     });
   };
 
@@ -478,11 +494,17 @@ export default function EnhancedCategoryManagement() {
                   res?.data?.error || "Failed to create mini-subcategory",
                 );
               }
+              // Capture returned ID so future updates/deletes can reference it
+              const miniId = res.data?.data?._id;
+              if (miniId) {
+                mini.id = miniId;
+              }
             } catch (e: any) {
               const errorMsg =
                 e?.message || "Failed to create mini-subcategory";
               console.error("Failed to create mini-subcategory", mini, e);
               setError(errorMsg);
+              continue; // Skip this mini but continue with others
             }
           }
         } catch (e) {
@@ -671,10 +693,16 @@ export default function EnhancedCategoryManagement() {
                 res?.data?.error || "Failed to create mini-subcategory",
               );
             }
+            // Capture returned ID so future updates/deletes can reference it
+            const miniId = res.data?.data?._id;
+            if (miniId) {
+              mini.id = miniId;
+            }
           } catch (e: any) {
             const errorMsg = e?.message || "Failed to create mini-subcategory";
             console.error("Create mini-subcategory failed:", mini, e);
             setError(errorMsg);
+            continue; // Skip this mini but continue with others
           }
         }
       }
@@ -1668,7 +1696,7 @@ export default function EnhancedCategoryManagement() {
                           {(sub.miniSubcategories || []).map(
                             (mini, miniIndex) => (
                               <div
-                                key={miniIndex}
+                                key={`mini-${mini.id || miniIndex}`}
                                 className="border border-gray-200 rounded p-3 bg-gray-50"
                               >
                                 <div className="grid grid-cols-2 gap-2 mb-2">
@@ -1679,7 +1707,6 @@ export default function EnhancedCategoryManagement() {
                                     <Input
                                       placeholder="Mini-category name"
                                       value={mini.name}
-                                      size="sm"
                                       onChange={(e) =>
                                         updateMiniSubcategory(
                                           subIndex,
@@ -1688,7 +1715,7 @@ export default function EnhancedCategoryManagement() {
                                           e.target.value,
                                         )
                                       }
-                                      className="text-sm"
+                                      className="text-sm h-8"
                                     />
                                   </div>
                                   <div>
@@ -1698,7 +1725,6 @@ export default function EnhancedCategoryManagement() {
                                     <Input
                                       placeholder="mini-slug"
                                       value={mini.slug}
-                                      size="sm"
                                       onChange={(e) =>
                                         updateMiniSubcategory(
                                           subIndex,
@@ -1707,7 +1733,7 @@ export default function EnhancedCategoryManagement() {
                                           e.target.value,
                                         )
                                       }
-                                      className="text-sm"
+                                      className="text-sm h-8"
                                     />
                                   </div>
                                 </div>
@@ -1728,7 +1754,7 @@ export default function EnhancedCategoryManagement() {
                                       )
                                     }
                                     rows={1}
-                                    className="text-sm"
+                                    className="text-sm min-h-8"
                                   />
                                 </div>
 
@@ -1740,7 +1766,6 @@ export default function EnhancedCategoryManagement() {
                                     <Input
                                       type="file"
                                       accept="image/*"
-                                      size="sm"
                                       onChange={(e) => {
                                         const file = e.target.files?.[0];
                                         if (file) {
@@ -1752,7 +1777,7 @@ export default function EnhancedCategoryManagement() {
                                           );
                                         }
                                       }}
-                                      className="text-sm"
+                                      className="text-sm h-8"
                                     />
                                   </div>
                                   <div className="flex items-center gap-2 ml-2">

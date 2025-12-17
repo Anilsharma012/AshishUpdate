@@ -11,7 +11,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { Plus, Edit2, Trash2, Save, X, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Save,
+  X,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { MiniSubcategory, Subcategory, Category } from "@shared/types";
 import { safeReadResponse, getApiErrorMessage } from "../../lib/response-utils";
 
@@ -19,16 +27,18 @@ export default function MiniSubcategoriesManagement() {
   const { token } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [miniSubcategories, setMiniSubcategories] = useState<MiniSubcategory[]>([]);
+  const [miniSubcategories, setMiniSubcategories] = useState<MiniSubcategory[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingMini, setEditingMini] = useState<MiniSubcategory | null>(null);
-  const [expandedSubcategories, setExpandedSubcategories] = useState<Set<string>>(
-    new Set(),
-  );
+  const [expandedSubcategories, setExpandedSubcategories] = useState<
+    Set<string>
+  >(new Set());
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -128,10 +138,13 @@ export default function MiniSubcategoriesManagement() {
   };
 
   const handleCreate = async () => {
-    if (!token || !formData.name || !formData.slug || !selectedSubcategory) {
-      setError("Please fill in all required fields");
+    if (!token || !formData.name || !selectedSubcategory) {
+      setError("Please fill in all required fields: name and subcategory");
       return;
     }
+
+    // Auto-generate slug if not provided
+    const slug = formData.slug || generateSlug(formData.name);
 
     try {
       const response = await fetch("/api/admin/mini-subcategories", {
@@ -143,7 +156,7 @@ export default function MiniSubcategoriesManagement() {
         body: JSON.stringify({
           subcategoryId: selectedSubcategory,
           name: formData.name,
-          slug: formData.slug,
+          slug,
           description: formData.description,
           sortOrder: formData.sortOrder,
           active: formData.active,
@@ -223,18 +236,18 @@ export default function MiniSubcategoriesManagement() {
   };
 
   const handleDelete = async (miniId: string) => {
-    if (!token || !confirm("Are you sure you want to delete this mini-subcategory?")) {
+    if (
+      !token ||
+      !confirm("Are you sure you want to delete this mini-subcategory?")
+    ) {
       return;
     }
 
     try {
-      const response = await fetch(
-        `/api/admin/mini-subcategories/${miniId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const response = await fetch(`/api/admin/mini-subcategories/${miniId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const { ok, status, data } = await safeReadResponse(response);
 
@@ -349,7 +362,10 @@ export default function MiniSubcategoriesManagement() {
             <label className="block text-sm font-medium mb-2">
               Category <span className="text-red-500">*</span>
             </label>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
@@ -369,7 +385,10 @@ export default function MiniSubcategoriesManagement() {
               <label className="block text-sm font-medium mb-2">
                 Subcategory <span className="text-red-500">*</span>
               </label>
-              <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory}>
+              <Select
+                value={selectedSubcategory}
+                onValueChange={setSelectedSubcategory}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a subcategory" />
                 </SelectTrigger>
@@ -417,13 +436,20 @@ export default function MiniSubcategoriesManagement() {
                     <Input
                       placeholder="Name *"
                       value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const name = e.target.value;
+                        // Auto-generate slug from name if slug is empty or was previously auto-generated
+                        const newSlug =
+                          !formData.slug ||
+                          formData.slug === generateSlug(formData.name)
+                            ? generateSlug(name)
+                            : formData.slug;
+                        setFormData({ ...formData, name, slug: newSlug });
+                      }}
                     />
 
                     <Input
-                      placeholder="Slug (auto-generated)"
+                      placeholder="Slug (optional - auto-generated from name if empty)"
                       value={formData.slug}
                       onChange={(e) =>
                         setFormData({ ...formData, slug: e.target.value })
@@ -447,7 +473,10 @@ export default function MiniSubcategoriesManagement() {
                       placeholder="Description"
                       value={formData.description}
                       onChange={(e) =>
-                        setFormData({ ...formData, description: e.target.value })
+                        setFormData({
+                          ...formData,
+                          description: e.target.value,
+                        })
                       }
                     />
 
@@ -478,7 +507,9 @@ export default function MiniSubcategoriesManagement() {
                     </div>
 
                     <div className="flex gap-2">
-                      <Button onClick={editingMini ? handleUpdate : handleCreate}>
+                      <Button
+                        onClick={editingMini ? handleUpdate : handleCreate}
+                      >
                         <Save className="w-4 h-4 mr-2" />
                         {editingMini ? "Update" : "Create"}
                       </Button>
@@ -502,12 +533,16 @@ export default function MiniSubcategoriesManagement() {
                             <h4 className="font-semibold">{mini.name}</h4>
                             <p className="text-sm text-gray-600">{mini.slug}</p>
                             {mini.description && (
-                              <p className="text-sm text-gray-500">{mini.description}</p>
+                              <p className="text-sm text-gray-500">
+                                {mini.description}
+                              </p>
                             )}
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge
-                              variant={mini.active !== false ? "default" : "secondary"}
+                              variant={
+                                mini.active !== false ? "default" : "secondary"
+                              }
                             >
                               {mini.active !== false ? "Active" : "Inactive"}
                             </Badge>
@@ -530,9 +565,7 @@ export default function MiniSubcategoriesManagement() {
                                 mini.active !== false ? "default" : "secondary"
                               }
                               size="sm"
-                              onClick={() =>
-                                handleToggleActive(mini._id || "")
-                              }
+                              onClick={() => handleToggleActive(mini._id || "")}
                             >
                               {mini.active !== false ? "Disable" : "Enable"}
                             </Button>
