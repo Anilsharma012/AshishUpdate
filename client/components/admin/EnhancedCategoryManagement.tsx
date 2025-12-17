@@ -1738,7 +1738,6 @@ export default function EnhancedCategoryManagement() {
                                     <Input
                                       type="file"
                                       accept="image/*"
-                                      size="sm"
                                       onChange={(e) => {
                                         const file = e.target.files?.[0];
                                         if (file) {
@@ -1750,7 +1749,7 @@ export default function EnhancedCategoryManagement() {
                                           );
                                         }
                                       }}
-                                      className="text-sm"
+                                      className="text-sm h-8"
                                     />
                                   </div>
                                   <div className="flex items-center gap-2 ml-2">
