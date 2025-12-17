@@ -258,11 +258,9 @@ export const getAdminNotificationCounts: RequestHandler = async (req, res) => {
   try {
     const db = getDatabase();
 
-    const pendingCount = await db
-      .collection("properties")
-      .countDocuments({
-        approvalStatus: { $in: ["pending", "pending_approval"] },
-      });
+    const pendingCount = await db.collection("properties").countDocuments({
+      approvalStatus: { $in: ["pending", "pending_approval"] },
+    });
 
     // Approximate resubmitted: pending properties that have been updated after creation
     const resubmittedCount = await db.collection("properties").countDocuments({
@@ -303,12 +301,10 @@ export const getAdminNotificationCounts: RequestHandler = async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error("Error fetching admin notification counts:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: "Failed to fetch admin notification counts",
-      });
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch admin notification counts",
+    });
   }
 };
 
@@ -607,6 +603,7 @@ export const initializeAdmin: RequestHandler = async (req, res) => {
 export const getAdminCategories: RequestHandler = async (req, res) => {
   try {
     const db = getDatabase();
+    const withSub = req.query.withSub === "true";
 
     const categories = await db
       .collection("categories")
@@ -631,28 +628,52 @@ export const getAdminCategories: RequestHandler = async (req, res) => {
       .toArray();
 
     // Map counts to categories
-    const categoriesWithCounts = categories.map((category: any) => {
-      const categoryCount = propertiesAgg
-        .filter((p) => p._id.propertyType === category.slug)
-        .reduce((sum, p) => sum + p.count, 0);
+    const categoriesWithCounts = await Promise.all(
+      categories.map(async (category: any) => {
+        const categoryCount = propertiesAgg
+          .filter((p) => p._id.propertyType === category.slug)
+          .reduce((sum, p) => sum + p.count, 0);
 
-      const subcategoriesWithCounts = category.subcategories.map((sub: any) => {
-        const subCount =
-          propertiesAgg.find(
-            (p) =>
-              p._id.propertyType === category.slug &&
-              p._id.subCategory === sub.slug,
-          )?.count || 0;
+        let subcategoriesWithCounts = (category.subcategories || []).map(
+          (sub: any) => {
+            const subCount =
+              propertiesAgg.find(
+                (p) =>
+                  p._id.propertyType === category.slug &&
+                  p._id.subCategory === sub.slug,
+              )?.count || 0;
 
-        return { ...sub, count: subCount };
-      });
+            return { ...sub, count: subCount };
+          },
+        );
 
-      return {
-        ...category,
-        count: categoryCount,
-        subcategories: subcategoriesWithCounts,
-      };
-    });
+        // If withSub is requested, also fetch mini-subcategories
+        if (withSub) {
+          subcategoriesWithCounts = await Promise.all(
+            subcategoriesWithCounts.map(async (sub: any) => {
+              const subId =
+                sub._id instanceof ObjectId ? sub._id.toString() : sub._id;
+              const miniSubcategories = await db
+                .collection("mini_subcategories")
+                .find({ subcategoryId: subId })
+                .sort({ sortOrder: 1 })
+                .toArray();
+
+              return {
+                ...sub,
+                miniSubcategories: miniSubcategories || [],
+              };
+            }),
+          );
+        }
+
+        return {
+          ...category,
+          count: categoryCount,
+          subcategories: subcategoriesWithCounts,
+        };
+      }),
+    );
 
     const response: ApiResponse<any[]> = {
       success: true,

@@ -454,12 +454,13 @@ export default function EnhancedCategoryManagement() {
 
           for (let j = 0; j < (sub.miniSubcategories?.length ?? 0); j++) {
             const mini = sub.miniSubcategories![j];
+            if (!mini.name || !mini.slug) continue; // Skip empty mini-subcategories
             try {
               let miniIconUrl = "";
               if (mini.imageFile)
                 miniIconUrl = await uploadSubIcon(mini.imageFile);
 
-              await api.post(
+              const res = await api.post(
                 "admin/mini-subcategories",
                 {
                   subcategoryId,
@@ -472,8 +473,16 @@ export default function EnhancedCategoryManagement() {
                 },
                 token,
               );
-            } catch (e) {
-              console.warn("Failed to create mini-subcategory", mini, e);
+              if (!res?.data?.success) {
+                throw new Error(
+                  res?.data?.error || "Failed to create mini-subcategory",
+                );
+              }
+            } catch (e: any) {
+              const errorMsg =
+                e?.message || "Failed to create mini-subcategory";
+              console.error("Failed to create mini-subcategory", mini, e);
+              setError(errorMsg);
             }
           }
         } catch (e) {
@@ -636,8 +645,10 @@ export default function EnhancedCategoryManagement() {
                 res?.data?.error || "Failed to update mini-subcategory",
               );
             }
-          } catch (e) {
+          } catch (e: any) {
+            const errorMsg = e?.message || "Failed to update mini-subcategory";
             console.error("Update mini-subcategory failed:", mini, e);
+            setError(errorMsg);
           }
         } else if (mini.name && mini.slug) {
           // Only create if mini has name and slug (prevents creating empty entries)
@@ -660,8 +671,10 @@ export default function EnhancedCategoryManagement() {
                 res?.data?.error || "Failed to create mini-subcategory",
               );
             }
-          } catch (e) {
+          } catch (e: any) {
+            const errorMsg = e?.message || "Failed to create mini-subcategory";
             console.error("Create mini-subcategory failed:", mini, e);
+            setError(errorMsg);
           }
         }
       }
