@@ -42,7 +42,8 @@ export default function CategoryPage({
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryInfo, setCategoryInfo] = useState<any>(null);
-  const [selectedSubcategory, setSelectedSubcategory] = useState<Subcategory | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] =
+    useState<Subcategory | null>(null);
 
   useEffect(() => {
     fetchCategoryAndSubcategories();
@@ -81,14 +82,16 @@ export default function CategoryPage({
             description: sub.description || "",
             count: sub.count || 0,
             miniSubcategories: Array.isArray(sub.miniSubcategories)
-              ? sub.miniSubcategories.map((mini: any): MiniSubcategory => ({
-                  id: mini._id || mini.id,
-                  _id: mini._id,
-                  name: mini.name,
-                  slug: mini.slug,
-                  description: mini.description || "",
-                  count: mini.count || 0,
-                }))
+              ? sub.miniSubcategories.map(
+                  (mini: any): MiniSubcategory => ({
+                    id: mini._id || mini.id,
+                    _id: mini._id,
+                    name: mini.name,
+                    slug: mini.slug,
+                    description: mini.description || "",
+                    count: mini.count || 0,
+                  }),
+                )
               : undefined,
           }));
         } else if (data && typeof data === "object") {
@@ -105,14 +108,16 @@ export default function CategoryPage({
             description: sub.description || "",
             count: sub.count || 0,
             miniSubcategories: Array.isArray(sub.miniSubcategories)
-              ? sub.miniSubcategories.map((mini: any): MiniSubcategory => ({
-                  id: mini._id || mini.id,
-                  _id: mini._id,
-                  name: mini.name,
-                  slug: mini.slug,
-                  description: mini.description || "",
-                  count: mini.count || 0,
-                }))
+              ? sub.miniSubcategories.map(
+                  (mini: any): MiniSubcategory => ({
+                    id: mini._id || mini.id,
+                    _id: mini._id,
+                    name: mini.name,
+                    slug: mini.slug,
+                    description: mini.description || "",
+                    count: mini.count || 0,
+                  }),
+                )
               : undefined,
           }));
         }
@@ -142,16 +147,13 @@ export default function CategoryPage({
       subcategory.miniSubcategories.length > 0
     ) {
       // Navigate to category properties which will handle showing mini-categories
-      navigate(
-        `/categories/${categorySlug}/${subcategory.slug}`,
-        {
-          state: {
-            category: categoryName,
-            subcategory: subcategory.name,
-            hasMiniSubcategories: true,
-          },
-        }
-      );
+      navigate(`/categories/${categorySlug}/${subcategory.slug}`, {
+        state: {
+          category: categoryName,
+          subcategory: subcategory.name,
+          hasMiniSubcategories: true,
+        },
+      });
     } else {
       // Navigate directly to properties if no mini-categories
       navigate(`/${categorySlug}/${subcategory.slug}`, {
@@ -253,7 +255,7 @@ export default function CategoryPage({
                               subcategory: selectedSubcategory.name,
                               miniSubcategory: mini.name,
                             },
-                          }
+                          },
                         );
                       }}
                       className="bg-white rounded-lg p-6 border border-gray-200 hover:border-[#C70000] hover:shadow-lg transition-all text-left group"
@@ -317,14 +319,16 @@ export default function CategoryPage({
                     {subcategory.miniSubcategories &&
                       subcategory.miniSubcategories.length > 0 && (
                         <div className="mb-3 flex flex-wrap gap-1">
-                          {subcategory.miniSubcategories.slice(0, 3).map((mini) => (
-                            <span
-                              key={mini.id || mini.slug}
-                              className="inline-block bg-red-50 text-[#C70000] px-2 py-1 rounded text-xs font-medium"
-                            >
-                              {mini.name}
-                            </span>
-                          ))}
+                          {subcategory.miniSubcategories
+                            .slice(0, 3)
+                            .map((mini) => (
+                              <span
+                                key={mini.id || mini.slug}
+                                className="inline-block bg-red-50 text-[#C70000] px-2 py-1 rounded text-xs font-medium"
+                              >
+                                {mini.name}
+                              </span>
+                            ))}
                           {subcategory.miniSubcategories.length > 3 && (
                             <span className="inline-block text-gray-600 text-xs font-medium">
                               +{subcategory.miniSubcategories.length - 3} more
