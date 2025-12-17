@@ -146,7 +146,7 @@ export default function MiniSubcategoriesManagement() {
         body: JSON.stringify({
           subcategoryId: selectedSubcategory,
           name: formData.name,
-          slug: formData.slug,
+          slug,
           description: formData.description,
           sortOrder: formData.sortOrder,
           active: formData.active,
