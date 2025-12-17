@@ -1096,32 +1096,39 @@ export default function EnhancedCategoryManagement() {
                         className="text-[#C70000] underline text-sm hover:font-semibold block"
                         onClick={() => {
                           setEditingCategory(category);
+                          const newSubs = (category.subcategories || []).map(
+                            (s) => ({
+                              id: s.id,
+                              name: s.name,
+                              slug: s.slug || "",
+                              description: s.description || "",
+                              miniSubcategories: (s.miniSubcategories || []).map(
+                                (m) => ({
+                                  id: m.id,
+                                  name: m.name,
+                                  slug: m.slug,
+                                  description: m.description,
+                                  active: m.active ?? true,
+                                })
+                              ),
+                            })
+                          );
                           setNewCategory({
                             name: category.name || "",
                             slug: category.slug || "",
                             description: category.description || "",
                             icon: category.icon || "",
                             iconFile: null,
-                            subcategories: (category.subcategories || []).map(
-                              (s) => ({
-                                id: s.id,
-                                name: s.name,
-                                slug: s.slug || "",
-                                description: s.description || "",
-                                miniSubcategories: (s.miniSubcategories || []).map(
-                                  (m) => ({
-                                    id: m.id,
-                                    name: m.name,
-                                    slug: m.slug,
-                                    description: m.description,
-                                    active: m.active ?? true,
-                                  })
-                                ),
-                              })
-                            ),
+                            subcategories: newSubs,
                             order: category.order ?? 999,
                             active: !!category.active,
                           });
+                          // Auto-expand all subcategories when editing
+                          const expandSet = new Set<string>();
+                          newSubs.forEach((s) => {
+                            if (s.id) expandSet.add(s.id);
+                          });
+                          setExpandedSubcategories(expandSet);
                           setIsCreateDialogOpen(true);
                         }}
                       >
@@ -1242,32 +1249,39 @@ export default function EnhancedCategoryManagement() {
                         variant="outline"
                         onClick={() => {
                           setEditingCategory(category);
+                          const newSubs = (category.subcategories || []).map(
+                            (s) => ({
+                              id: s.id,
+                              name: s.name,
+                              slug: s.slug || "",
+                              description: s.description || "",
+                              miniSubcategories: (s.miniSubcategories || []).map(
+                                (m) => ({
+                                  id: m.id,
+                                  name: m.name,
+                                  slug: m.slug,
+                                  description: m.description,
+                                  active: m.active ?? true,
+                                })
+                              ),
+                            })
+                          );
                           setNewCategory({
                             name: category.name || "",
                             slug: category.slug || "",
                             description: category.description || "",
                             icon: category.icon || "",
                             iconFile: null,
-                            subcategories: (category.subcategories || []).map(
-                              (s) => ({
-                                id: s.id,
-                                name: s.name,
-                                slug: s.slug || "",
-                                description: s.description || "",
-                                miniSubcategories: (s.miniSubcategories || []).map(
-                                  (m) => ({
-                                    id: m.id,
-                                    name: m.name,
-                                    slug: m.slug,
-                                    description: m.description,
-                                    active: m.active ?? true,
-                                  })
-                                ),
-                              })
-                            ),
+                            subcategories: newSubs,
                             order: category.order ?? 999,
                             active: !!category.active,
                           });
+                          // Auto-expand all subcategories when editing
+                          const expandSet = new Set<string>();
+                          newSubs.forEach((s) => {
+                            if (s.id) expandSet.add(s.id);
+                          });
+                          setExpandedSubcategories(expandSet);
                           setIsCreateDialogOpen(true);
                         }}
                         aria-label="Edit category"
