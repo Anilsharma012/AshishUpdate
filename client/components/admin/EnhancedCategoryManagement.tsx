@@ -1129,8 +1129,9 @@ export default function EnhancedCategoryManagement() {
                           });
                           // Auto-expand all subcategories when editing
                           const expandSet = new Set<string>();
-                          newSubs.forEach((s) => {
-                            if (s.id) expandSet.add(s.id);
+                          newSubs.forEach((s, idx) => {
+                            // Expand by ID if exists, otherwise by index key (for new ones)
+                            expandSet.add(s.id || `sub-${idx}`);
                           });
                           setExpandedSubcategories(expandSet);
                           setIsCreateDialogOpen(true);
@@ -1282,8 +1283,9 @@ export default function EnhancedCategoryManagement() {
                           });
                           // Auto-expand all subcategories when editing
                           const expandSet = new Set<string>();
-                          newSubs.forEach((s) => {
-                            if (s.id) expandSet.add(s.id);
+                          newSubs.forEach((s, idx) => {
+                            // Expand by ID if exists, otherwise by index key (for new ones)
+                            expandSet.add(s.id || `sub-${idx}`);
                           });
                           setExpandedSubcategories(expandSet);
                           setIsCreateDialogOpen(true);
