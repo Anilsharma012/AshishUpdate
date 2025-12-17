@@ -1726,7 +1726,7 @@ export default function EnhancedCategoryManagement() {
                                       )
                                     }
                                     rows={1}
-                                    className="text-sm"
+                                    className="text-sm min-h-8"
                                   />
                                 </div>
 
