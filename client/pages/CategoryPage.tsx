@@ -79,6 +79,16 @@ export default function CategoryPage({
             slug: sub.slug,
             description: sub.description || "",
             count: sub.count || 0,
+            miniSubcategories: Array.isArray(sub.miniSubcategories)
+              ? sub.miniSubcategories.map((mini: any): MiniSubcategory => ({
+                  id: mini._id || mini.id,
+                  _id: mini._id,
+                  name: mini.name,
+                  slug: mini.slug,
+                  description: mini.description || "",
+                  count: mini.count || 0,
+                }))
+              : undefined,
           }));
         } else if (data && typeof data === "object") {
           // Object response with category info
@@ -93,6 +103,16 @@ export default function CategoryPage({
             slug: sub.slug,
             description: sub.description || "",
             count: sub.count || 0,
+            miniSubcategories: Array.isArray(sub.miniSubcategories)
+              ? sub.miniSubcategories.map((mini: any): MiniSubcategory => ({
+                  id: mini._id || mini.id,
+                  _id: mini._id,
+                  name: mini.name,
+                  slug: mini.slug,
+                  description: mini.description || "",
+                  count: mini.count || 0,
+                }))
+              : undefined,
           }));
         }
       } else {
