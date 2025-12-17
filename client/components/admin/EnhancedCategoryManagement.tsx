@@ -812,7 +812,8 @@ export default function EnhancedCategoryManagement() {
     });
     setEditingCategory(null);
     setEditingMiniSubcategoryIndex(null);
-    setExpandedSubcategories(new Set());
+    // Keep expanded state for consistency when reopening
+    // setExpandedSubcategories(new Set());
   };
 
   const addSubcategory = () => {
