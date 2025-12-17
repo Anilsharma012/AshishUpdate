@@ -553,8 +553,12 @@ export default function EnhancedCategoryManagement() {
         }
       }
 
+      // Get the original subcategory from editingCategory to compare mini-subcategories
+      const originalSubcategory = editingCategory.subcategories.find(
+        (s) => s.id === sub.id
+      );
       const existingMiniById = new Map(
-        (sub.miniSubcategories || []).map((m) => [m.id, m])
+        (originalSubcategory?.miniSubcategories || []).map((m) => [m.id, m])
       );
 
       for (let j = 0; j < (sub.miniSubcategories?.length ?? 0); j++) {
@@ -592,7 +596,8 @@ export default function EnhancedCategoryManagement() {
           } catch (e) {
             console.error("Update mini-subcategory failed:", mini, e);
           }
-        } else {
+        } else if (mini.name && mini.slug) {
+          // Only create if mini has name and slug (prevents creating empty entries)
           try {
             const res = await api.post(
               "admin/mini-subcategories",
@@ -600,7 +605,7 @@ export default function EnhancedCategoryManagement() {
                 subcategoryId,
                 name: mini.name,
                 slug: mini.slug,
-                description: mini.description,
+                description: mini.description || "",
                 iconUrl: miniIconUrl || "/placeholder.svg",
                 sortOrder: miniSortOrder,
                 isActive: mini.active ?? true,
@@ -616,11 +621,12 @@ export default function EnhancedCategoryManagement() {
         }
       }
 
+      // Delete mini-subcategories that are in the original data but not in the form data
       const incomingMiniIds = new Set(
         (sub.miniSubcategories || []).filter((m) => !!m.id).map((m) => m.id!)
       );
       for (const [id] of existingMiniById) {
-        if (!incomingMiniIds.has(id)) {
+        if (id && !incomingMiniIds.has(id)) {
           try {
             const res = await api.delete(`admin/mini-subcategories/${id}`, token);
             if (!res?.data?.success) {
