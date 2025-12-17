@@ -420,13 +420,18 @@ export default function MiniSubcategoriesManagement() {
                     <Input
                       placeholder="Name *"
                       value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const name = e.target.value;
+                        // Auto-generate slug from name if slug is empty or was previously auto-generated
+                        const newSlug = !formData.slug || formData.slug === generateSlug(formData.name)
+                          ? generateSlug(name)
+                          : formData.slug;
+                        setFormData({ ...formData, name, slug: newSlug })
+                      }}
                     />
 
                     <Input
-                      placeholder="Slug (auto-generated)"
+                      placeholder="Slug (optional - auto-generated from name if empty)"
                       value={formData.slug}
                       onChange={(e) =>
                         setFormData({ ...formData, slug: e.target.value })
