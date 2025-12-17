@@ -42,6 +42,7 @@ export default function CategoryPage({
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryInfo, setCategoryInfo] = useState<any>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<Subcategory | null>(null);
 
   useEffect(() => {
     fetchCategoryAndSubcategories();
