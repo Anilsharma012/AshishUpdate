@@ -1668,7 +1668,7 @@ export default function EnhancedCategoryManagement() {
                           {(sub.miniSubcategories || []).map(
                             (mini, miniIndex) => (
                               <div
-                                key={miniIndex}
+                                key={`mini-${mini.id || miniIndex}`}
                                 className="border border-gray-200 rounded p-3 bg-gray-50"
                               >
                                 <div className="grid grid-cols-2 gap-2 mb-2">
