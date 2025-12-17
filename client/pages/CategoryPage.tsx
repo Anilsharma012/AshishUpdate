@@ -213,6 +213,73 @@ export default function CategoryPage({
                 No subcategories available
               </p>
             </div>
+          ) : selectedSubcategory &&
+            selectedSubcategory.miniSubcategories &&
+            selectedSubcategory.miniSubcategories.length > 0 ? (
+            <>
+              <div className="mb-6 flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedSubcategory(null)}
+                  className="text-[#C70000] hover:underline text-sm font-semibold flex items-center gap-1"
+                >
+                  <ChevronRight className="w-4 h-4 rotate-180" />
+                  Back to {categoryName}
+                </button>
+              </div>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  {selectedSubcategory.name}
+                </h2>
+                {selectedSubcategory.description && (
+                  <p className="text-gray-600">
+                    {selectedSubcategory.description}
+                  </p>
+                )}
+              </div>
+              <div className="mb-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  Choose a Type
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {selectedSubcategory.miniSubcategories.map((mini) => (
+                    <button
+                      key={mini.id || mini.slug}
+                      onClick={() => {
+                        navigate(
+                          `/categories/${categorySlug}/${selectedSubcategory.slug}/${mini.slug}`,
+                          {
+                            state: {
+                              category: categoryName,
+                              subcategory: selectedSubcategory.name,
+                              miniSubcategory: mini.name,
+                            },
+                          }
+                        );
+                      }}
+                      className="bg-white rounded-lg p-6 border border-gray-200 hover:border-[#C70000] hover:shadow-lg transition-all text-left group"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <h4 className="text-lg font-semibold text-gray-900 group-hover:text-[#C70000] transition-colors">
+                          {mini.name}
+                        </h4>
+                        <span className="bg-red-50 text-[#C70000] px-3 py-1 rounded-full text-sm font-semibold">
+                          {mini.count || 0}
+                        </span>
+                      </div>
+                      {mini.description && (
+                        <p className="text-gray-600 text-sm mb-4">
+                          {mini.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-[#C70000] font-semibold text-sm group-hover:gap-3 transition-all">
+                        View Listings
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
           ) : (
             <>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
@@ -222,7 +289,16 @@ export default function CategoryPage({
                 {subcategories.map((subcategory) => (
                   <button
                     key={subcategory.id || subcategory.slug}
-                    onClick={() => handleSubcategoryClick(subcategory)}
+                    onClick={() => {
+                      if (
+                        subcategory.miniSubcategories &&
+                        subcategory.miniSubcategories.length > 0
+                      ) {
+                        setSelectedSubcategory(subcategory);
+                      } else {
+                        handleSubcategoryClick(subcategory);
+                      }
+                    }}
                     className="bg-white rounded-lg p-6 border border-gray-200 hover:border-[#C70000] hover:shadow-lg transition-all text-left group"
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -238,8 +314,29 @@ export default function CategoryPage({
                         {subcategory.description}
                       </p>
                     )}
+                    {subcategory.miniSubcategories &&
+                      subcategory.miniSubcategories.length > 0 && (
+                        <div className="mb-3 flex flex-wrap gap-1">
+                          {subcategory.miniSubcategories.slice(0, 3).map((mini) => (
+                            <span
+                              key={mini.id || mini.slug}
+                              className="inline-block bg-red-50 text-[#C70000] px-2 py-1 rounded text-xs font-medium"
+                            >
+                              {mini.name}
+                            </span>
+                          ))}
+                          {subcategory.miniSubcategories.length > 3 && (
+                            <span className="inline-block text-gray-600 text-xs font-medium">
+                              +{subcategory.miniSubcategories.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      )}
                     <div className="flex items-center gap-2 text-[#C70000] font-semibold text-sm group-hover:gap-3 transition-all">
-                      View Listings
+                      {subcategory.miniSubcategories &&
+                      subcategory.miniSubcategories.length > 0
+                        ? "Choose Type"
+                        : "View Listings"}
                       <ChevronRight className="w-4 h-4" />
                     </div>
                   </button>
