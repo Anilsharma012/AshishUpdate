@@ -6,6 +6,15 @@ import CategoryBar from "../components/CategoryBar";
 import BottomNavigation from "../components/BottomNavigation";
 import StaticFooter from "../components/StaticFooter";
 
+interface MiniSubcategory {
+  id?: string;
+  _id?: string;
+  name: string;
+  slug: string;
+  description?: string;
+  count?: number;
+}
+
 interface Subcategory {
   id?: string;
   _id?: string;
@@ -13,6 +22,7 @@ interface Subcategory {
   slug: string;
   description: string;
   count?: number;
+  miniSubcategories?: MiniSubcategory[];
 }
 
 interface CategoryPageProps {
