@@ -135,11 +135,28 @@ export default function CategoryPage({
   };
 
   const handleSubcategoryClick = (subcategory: Subcategory) => {
-    // Navigate to category properties with both category and subcategory
-    // Use the new route format for proper path routing
-    navigate(`/${categorySlug}/${subcategory.slug}`, {
-      state: { category: categoryName, subcategory: subcategory.name },
-    });
+    // If subcategory has mini-categories, show them first
+    if (
+      subcategory.miniSubcategories &&
+      subcategory.miniSubcategories.length > 0
+    ) {
+      // Navigate to category properties which will handle showing mini-categories
+      navigate(
+        `/categories/${categorySlug}/${subcategory.slug}`,
+        {
+          state: {
+            category: categoryName,
+            subcategory: subcategory.name,
+            hasMiniSubcategories: true,
+          },
+        }
+      );
+    } else {
+      // Navigate directly to properties if no mini-categories
+      navigate(`/${categorySlug}/${subcategory.slug}`, {
+        state: { category: categoryName, subcategory: subcategory.name },
+      });
+    }
   };
 
   if (loading) {
